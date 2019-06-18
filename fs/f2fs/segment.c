@@ -2899,7 +2899,7 @@ int f2fs_trim_fs(struct f2fs_sb_info *sbi, struct fstrim_range *range)
 
 	if (is_sbi_flag_set(sbi, SBI_NEED_FSCK)) {
 		f2fs_warn(sbi, "Found FS corruption, run fsck to fix.");
-		return -EFSCORRUPTED;
+		return -EIO;
 	}
 
 	/* start/end segment number in main_area */
@@ -4397,7 +4397,7 @@ out:
 				 "Current segment's next free block offset is inconsistent with bitmap, logtype:%u, segno:%u, type:%u, next_blkoff:%u, blkofs:%u",
 				 i, curseg->segno, curseg->alloc_type,
 				 curseg->next_blkoff, blkofs);
-			return -EFSCORRUPTED;
+			return -EINVAL;
 		}
 	}
 	return 0;

@@ -2444,20 +2444,26 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			offsetof(struct f2fs_super_block, crc)) {
 			f2fs_info(sbi, "Invalid SB checksum offset: %zu",
 				  crc_offset);
-			return -EFSCORRUPTED;
+			return 1;
 		}
 		crc = le32_to_cpu(raw_super->crc);
 		if (!f2fs_crc_valid(sbi, crc, raw_super, crc_offset)) {
 			f2fs_info(sbi, "Invalid SB checksum value: %u", crc);
-			return -EFSCORRUPTED;
+			return 1;
 		}
+	}
+
+	if (F2FS_SUPER_MAGIC != le32_to_cpu(raw_super->magic)) {
+		f2fs_info(sbi, "Magic Mismatch, valid(0x%x) - read(0x%x)",
+			  F2FS_SUPER_MAGIC, le32_to_cpu(raw_super->magic));
+		return 1;
 	}
 
 	/* Currently, support only 4KB page cache size */
 	if (F2FS_BLKSIZE != PAGE_SIZE) {
 		f2fs_info(sbi, "Invalid page_cache_size (%lu), supports only 4KB",
 			  PAGE_SIZE);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	/* Currently, support only 4KB block size */
@@ -2465,14 +2471,14 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 	if (blocksize != F2FS_BLKSIZE) {
 		f2fs_info(sbi, "Invalid blocksize (%u), supports only 4KB",
 			  blocksize);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	/* check log blocks per segment */
 	if (le32_to_cpu(raw_super->log_blocks_per_seg) != 9) {
 		f2fs_info(sbi, "Invalid log blocks per segment (%u)",
 			  le32_to_cpu(raw_super->log_blocks_per_seg));
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	/* Currently, support 512/1024/2048/4096 bytes sector size */
@@ -2482,7 +2488,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 				F2FS_MIN_LOG_SECTOR_SIZE) {
 		f2fs_info(sbi, "Invalid log sectorsize (%u)",
 			  le32_to_cpu(raw_super->log_sectorsize));
-		return -EFSCORRUPTED;
+		return 1;
 	}
 	if (le32_to_cpu(raw_super->log_sectors_per_block) +
 		le32_to_cpu(raw_super->log_sectorsize) !=
@@ -2490,7 +2496,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 		f2fs_info(sbi, "Invalid log sectors per block(%u) log sectorsize(%u)",
 			  le32_to_cpu(raw_super->log_sectors_per_block),
 			  le32_to_cpu(raw_super->log_sectorsize));
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	segment_count = le32_to_cpu(raw_super->segment_count);
@@ -2504,7 +2510,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 	if (segment_count > F2FS_MAX_SEGMENT ||
 				segment_count < F2FS_MIN_SEGMENTS) {
 		f2fs_info(sbi, "Invalid segment count (%u)", segment_count);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	if (total_sections > segment_count ||
@@ -2512,25 +2518,25 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			segs_per_sec > segment_count || !segs_per_sec) {
 		f2fs_info(sbi, "Invalid segment/section count (%u, %u x %u)",
 			  segment_count, total_sections, segs_per_sec);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	if ((segment_count / segs_per_sec) < total_sections) {
 		f2fs_info(sbi, "Small segment_count (%u < %u * %u)",
 			  segment_count, segs_per_sec, total_sections);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	if (segment_count > (le64_to_cpu(raw_super->block_count) >> 9)) {
 		f2fs_info(sbi, "Wrong segment_count / block_count (%u > %llu)",
 			  segment_count, le64_to_cpu(raw_super->block_count));
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	if (secs_per_zone > total_sections || !secs_per_zone) {
 		f2fs_info(sbi, "Wrong secs_per_zone / total_sections (%u, %u)",
 			  secs_per_zone, total_sections);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 	if (le32_to_cpu(raw_super->extension_count) > F2FS_MAX_EXTENSION ||
 			raw_super->hot_ext_count > F2FS_MAX_EXTENSION ||
@@ -2540,7 +2546,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			  le32_to_cpu(raw_super->extension_count),
 			  raw_super->hot_ext_count,
 			  F2FS_MAX_EXTENSION);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	if (le32_to_cpu(raw_super->cp_payload) >
@@ -2548,7 +2554,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 		f2fs_info(sbi, "Insane cp_payload (%u > %u)",
 			  le32_to_cpu(raw_super->cp_payload),
 			  blocks_per_seg - F2FS_CP_PACKS);
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	/* check reserved ino info */
@@ -2559,7 +2565,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			  le32_to_cpu(raw_super->node_ino),
 			  le32_to_cpu(raw_super->meta_ino),
 			  le32_to_cpu(raw_super->root_ino));
-		return -EFSCORRUPTED;
+		return 1;
 	}
 
 	/* check CP/SIT/NAT/SSA/MAIN_AREA area boundary */
@@ -2697,9 +2703,7 @@ int f2fs_sanity_check_ckpt(struct f2fs_sb_info *sbi)
 
 	if (__is_set_ckpt_flags(ckpt, CP_LARGE_NAT_BITMAP_FLAG) &&
 		le32_to_cpu(ckpt->checksum_offset) != CP_MIN_CHKSUM_OFFSET) {
-		f2fs_warn(sbi, "using deprecated layout of large_nat_bitmap, "
-			  "please run fsck v1.13.0 or higher to repair, chksum_offset: %u, "
-			  "fixed with patch: \"f2fs-tools: relocate chksum_offset for large_nat_bitmap feature\"",
+		f2fs_warn(sbi, "layout of large_nat_bitmap is deprecated, run fsck to repair, chksum_offset: %u",
 			  le32_to_cpu(ckpt->checksum_offset));
 		return 1;
 	}
@@ -2881,10 +2885,10 @@ static int read_raw_super_block(struct f2fs_sb_info *sbi,
 		}
 
 		/* sanity checking of raw super */
-		err = sanity_check_raw_super(sbi, bh);
-		if (err) {
+		if (sanity_check_raw_super(sbi, bh)) {
 			f2fs_err(sbi, "Can't find valid F2FS filesystem in %dth superblock",
 				 block + 1);
+			err = -EINVAL;
 			brelse(bh);
 			continue;
 		}
