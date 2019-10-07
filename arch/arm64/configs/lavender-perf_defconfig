@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.195 Kernel Configuration
+# Linux/arm64 4.4.196 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -4996,6 +4996,7 @@ CONFIG_IPC_LOGGING=y
 # CONFIG_QCOM_RTB is not set
 CONFIG_TRACING=y
 CONFIG_GENERIC_TRACER=y
+CONFIG_DISABLE_TRACE_PRINTK=y
 CONFIG_TRACING_SUPPORT=y
 CONFIG_FTRACE=y
 # CONFIG_FUNCTION_TRACER is not set
